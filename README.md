@@ -52,7 +52,7 @@
 [Локальный буфер/агрегатор] -- (если требуется кэширование на edge)
          │
          ▼
-[Передающий агент] -- (HTTP/MQTT/TLS)
+[Передающий агент] -- (gRPC)
          │
          ▼
 [Load Balancer] <---> [Ingestion Service] <---> [Message Broker (Kafka/RabbitMQ)]

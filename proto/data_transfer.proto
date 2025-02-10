@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package data_transfer;
+
+service DataTransfer {
+    rpc SendData (DataRequest) returns (DataResponse) {}
+}
+
+message DataRequest {
+    bytes data = 1;
+    int64 timestamp = 2;
+}
+
+message DataResponse {
+    bool success = 1;
+    int64 timestamp = 2;
+} 

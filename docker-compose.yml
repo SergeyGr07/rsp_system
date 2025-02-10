@@ -1,0 +1,73 @@
+version: '3'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    networks:
+      grpc-net:
+        aliases:
+          - server
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    volumes:
+      - shared-data:/shared
+    networks:
+      grpc-net:
+    depends_on:
+      - server
+      - traffic-shaper
+
+  traffic-shaper:
+    image: alpine:latest
+    privileged: true
+    network_mode: "host"
+    command: >
+      sh -c "
+        apk add --no-cache iproute2 &&
+        while true; do
+          CLIENT_IF=$$(docker network inspect rsp_system_grpc-net | grep -B 4 'client' | grep 'eth' | cut -d'\"' -f 4) &&
+          tc qdisc add dev $$CLIENT_IF root tbf rate 10mbit burst 32kbit latency 400ms ||
+          tc qdisc change dev $$CLIENT_IF root tbf rate 10mbit burst 32kbit latency 400ms;
+          sleep 5;
+        done
+      "
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  prometheus:
+    build:
+      context: .
+      dockerfile: prometheus/Dockerfile
+    ports:
+      - "9090:9090"
+    networks:
+      - grpc-net
+    depends_on:
+      - client
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - grpc-net
+    depends_on:
+      - prometheus
+
+networks:
+  grpc-net:
+    driver: bridge
+
+volumes:
+  shared-data:
+  grafana-storage: 
